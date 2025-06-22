@@ -1,31 +1,23 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
-const Record = (props) => (
+const Record = ({ record, deleteRecord }) => (
   <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-    <td className="p-4 align-middle [&:has([role=checkbox])]:pr-0">
-      {props.record.name}
-    </td>
-    <td className="p-4 align-middle [&:has([role=checkbox])]:pr-0">
-      {props.record.position}
-    </td>
-    <td className="p-4 align-middle [&:has([role=checkbox])]:pr-0">
-      {props.record.level}
-    </td>
-    <td className="p-4 align-middle [&:has([role=checkbox])]:pr-0">
+    <td className="p-4 align-middle">{record.name}</td>
+    <td className="p-4 align-middle">{record.position}</td>
+    <td className="p-4 align-middle">{record.level}</td>
+    <td className="p-4 align-middle">
       <div className="flex gap-2">
         <Link
           className="inline-flex items-center justify-center text-sm font-medium border h-9 rounded-md px-3 hover:bg-slate-100"
-          to={`/edit/${props.record._id}`}
+          to={`/edit/${record._id}`}
         >
           Edit
         </Link>
         <button
           className="inline-flex items-center justify-center text-sm font-medium border h-9 rounded-md px-3 hover:bg-slate-100 hover:text-red-600"
           type="button"
-          onClick={() => {
-            props.deleteRecord(props.record._id);
-          }}
+          onClick={() => deleteRecord(record._id)}
         >
           Delete
         </button>
@@ -40,33 +32,32 @@ export default function RecordList() {
   // Fetch records
   useEffect(() => {
     async function getRecords() {
-      const response = await fetch(`${import.meta.env.VITE_REACT_APP_API_URL}/record/`);
-      if (!response.ok) {
-        console.error("An error occurred:", response.statusText);
-        return;
+      try {
+        const response = await fetch(`${import.meta.env.VITE_REACT_APP_API_URL}/record/`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setRecords(data);
+      } catch (error) {
+        console.error("Error fetching records:", error.message);
       }
-      const data = await response.json();
-      setRecords(data);
     }
+
     getRecords();
   }, []);
 
   // Delete a record
   async function deleteRecord(id) {
-    await fetch(`${import.meta.env.VITE_REACT_APP_API_URL}/record/${id}`, {
-      method: "DELETE",
-    });
-    setRecords(records.filter((record) => record._id !== id));
-  }
-
-  function recordList() {
-    return records.map((record) => (
-      <Record
-        record={record}
-        deleteRecord={deleteRecord}
-        key={record._id}
-      />
-    ));
+    try {
+      const response = await fetch(`${import.meta.env.VITE_REACT_APP_API_URL}/record/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Failed to delete record");
+      setRecords((prev) => prev.filter((record) => record._id !== id));
+    } catch (error) {
+      console.error(error.message);
+    }
   }
 
   return (
@@ -84,7 +75,9 @@ export default function RecordList() {
               </tr>
             </thead>
             <tbody>
-              {recordList()}
+              {records.map((record) => (
+                <Record key={record._id} record={record} deleteRecord={deleteRecord} />
+              ))}
             </tbody>
           </table>
         </div>
